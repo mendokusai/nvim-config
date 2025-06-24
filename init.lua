@@ -16,7 +16,7 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 -- Load plugin definitions from lua/plugins/
-require("config.lazy")
 require("config.options")
 require("config.keymaps")
+require("config.lazy")
 require("lazy").setup("plugins")

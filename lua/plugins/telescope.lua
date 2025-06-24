@@ -11,7 +11,7 @@ return {
       vim.keymap.set("n", "<leader>fG", builtin.git_status, { desc = "Git status" })
       vim.keymap.set("n", "<leader>fh", builtin.help_tags, { desc = "Find help" })
       vim.keymap.set("n", "<leader>fs", builtin.lsp_document_symbols, { desc = "Find symbols in buffer" })
-      vim.keymap.set("n", "<leader>fS", bu[48;46;110;1380;1540tiltin.lsp_dynamic_workspace_symbols, { desc = "Find symbols in workspace" })
+      vim.keymap.set("n", "<leader>fS", builtin.lsp_dynamic_workspace_symbols, { desc = "Find symbols in workspace" })
     end,
   },
   {
