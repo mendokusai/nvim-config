@@ -12,6 +12,8 @@ vim.opt.hlsearch = true
 vim.opt.incsearch = true
 vim.opt.showmatch = true
 vim.opt.wrap = true
+vim.opt.linebreak = true
+vim.opt.breakindent = true
 
 -- Enable system clipboard
 vim.o.clipboard = "unnamed,unnamedplus"
