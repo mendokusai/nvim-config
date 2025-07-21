@@ -11,6 +11,7 @@ vim.opt.autoindent = true
 vim.opt.hlsearch = true
 vim.opt.incsearch = true
 vim.opt.showmatch = true
+vim.opt.wrap = true
 
 -- Enable system clipboard
 vim.o.clipboard = "unnamed,unnamedplus"
@@ -29,5 +30,16 @@ vim.g.clipboard = {
   cache_enabled = 0,
 }
 
--- Disable yank menu timeout to prevent popup
-vim.opt.timeoutlen = 50
+-- Set reasonable timeout and window constraints
+vim.opt.timeoutlen = 300
+vim.opt.winminheight = 1
+vim.opt.winminwidth = 10
+
+-- Disable automatic window equalization to prevent terminal resizing issues
+vim.opt.equalalways = false
+
+vim.filetype.add({
+  extension = {
+    heex = "heex",
+  },
+})
