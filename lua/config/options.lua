@@ -14,6 +14,7 @@ vim.opt.showmatch = true
 vim.opt.wrap = true
 vim.opt.linebreak = true
 vim.opt.breakindent = true
+vim.opt.foldmethod = "manual"
 
 -- Enable system clipboard
 vim.o.clipboard = "unnamed,unnamedplus"
