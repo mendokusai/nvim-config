@@ -18,11 +18,14 @@ vim.api.nvim_create_autocmd({ "VimResized" }, {
     local current_tab = vim.fn.tabpagenr()
     -- Only equalize non-terminal windows
     for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-      local buf = vim.api.nvim_win_get_buf(win)
-      local buftype = vim.api.nvim_buf_get_option(buf, "buftype")
-      if buftype ~= "terminal" then
-        vim.cmd("wincmd =")
-        break
+      -- Check if window is still valid
+      if vim.api.nvim_win_is_valid(win) then
+        local buf = vim.api.nvim_win_get_buf(win)
+        local buftype = vim.bo[buf].buftype
+        if buftype ~= "terminal" then
+          vim.cmd("wincmd =")
+          break
+        end
       end
     end
     vim.cmd("tabnext " .. current_tab)
