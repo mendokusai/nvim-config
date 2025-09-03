@@ -8,7 +8,7 @@
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
 -- Override LazyVim's window resize behavior to preserve terminal sizing
-vim.api.nvim_del_augroup_by_name("lazyvim_resize_splits")
+-- vim.api.nvim_del_augroup_by_name("lazyvim_resize_splits")
 
 -- Create custom resize behavior that preserves terminal proportions
 vim.api.nvim_create_augroup("custom_resize_splits", { clear = true })
@@ -31,3 +31,48 @@ vim.api.nvim_create_autocmd({ "VimResized" }, {
     vim.cmd("tabnext " .. current_tab)
   end,
 })
+
+-- A method to clean up simple glyph errors on save.
+local function fix_glyph_issues()
+  local save_cursor = vim.fn.getpos(".")
+  local save_view = vim.fn.winsaveview()
+
+  -- Safe glyph fixes that won't break code syntax
+  vim.cmd([[silent! %s/\s\+$//e]])           -- trailing whitespace
+  vim.cmd([[silent! %s/\n\{3,}/\r\r/e]])     -- multiple blank lines
+  vim.cmd([[silent! %s/\%u00a0/ /ge]])       -- non-breaking spaces
+  vim.cmd([[silent! %s/\%u200b//ge]])        -- zero-width spaces
+  vim.cmd([[silent! %s/\%ufeff//ge]])        -- BOM
+  vim.cmd([[silent! %s/\%u200c//ge]])        -- zero-width non-joiner
+  vim.cmd([[silent! %s/\%u200d//ge]])        -- zero-width joiner
+  vim.cmd([[silent! %s/\r\n/\r/e]])          -- CRLF to LF
+
+  -- Tabs to spaces if expandtab is set
+  if vim.bo.expandtab then
+    local shiftwidth = vim.bo.shiftwidth > 0 and vim.bo.shiftwidth or vim.bo.tabstop
+    vim.cmd(string.format([[silent! %%s/\t/%s/ge]], string.rep(" ", shiftwidth)))
+  end
+
+  -- Ensure single newline at EOF
+  vim.cmd([[silent! %s/\n\+\%$//e]])
+  if vim.fn.getline('$') ~= '' then
+    vim.cmd([[silent! normal! Go]])
+  end
+
+  vim.fn.winrestview(save_view)
+  vim.fn.setpos(".", save_cursor)
+end
+
+-- linewraps
+vim.opt_local.wrap = true
+
+vim.api.nvim_create_autocmd("BufWritePre", {
+  pattern = "*",
+  callback = fix_glyph_issues,
+})
+
+vim.api.nvim_create_autocmd("BufWritePre", {
+  pattern = "*",
+  callback = fix_glyph_issues,
+})
+

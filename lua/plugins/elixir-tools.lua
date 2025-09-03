@@ -6,6 +6,16 @@ return {
     local elixir = require("elixir")
     local elixirls = require("elixir.elixirls")
 
+    -- Setup Lexical LSP
+    require('lspconfig').lexical.setup {
+      cmd = { vim.fn.expand("~/.local/bin/expert/expert") },
+      root_dir = function(fname)
+        return require('lspconfig').util.root_pattern("mix.exs", ".git")(fname) or vim.loop.cwd()
+      end,
+      filetypes = { "elixir", "eelixir", "heex" },
+      settings = {}
+    }
+
     elixir.setup {
       nextls = {enable = true},
       elixirls = {
@@ -27,5 +37,6 @@ return {
   end,
   dependencies = {
     "nvim-lua/plenary.nvim",
+    "neovim/nvim-lspconfig",
   },
 }
