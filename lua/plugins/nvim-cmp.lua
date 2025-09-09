@@ -7,6 +7,17 @@ return {
       -- Add a delay in milliseconds (for menu popup)
       throttle_time = 300,
     })
+
+    -- Disable completion entirely for markdown files
+    opts.enabled = function()
+      local filetype = vim.bo.filetype
+      if filetype == "markdown" then
+        return false
+      end
+      return true
+    end
+
+    return opts
   end,
 }
 
