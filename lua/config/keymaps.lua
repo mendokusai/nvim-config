@@ -5,8 +5,6 @@ vim.keymap.set("n", "<C-n>", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle File Tr
 
 vim.keymap.set("n", "<C-p>", "<cmd>Telescope find_files<CR>", { desc = "Find Files" })
 
-vim.keymap.set("v", "gc", "<Plug>(comment_toggle_linewise_visual)", { desc = "Toggle comment" })
-
 -- Force clipboard yank mappings
 local function yank_to_clipboard()
   local text = vim.fn.getreg('"')
@@ -38,3 +36,10 @@ vim.keymap.set("v", "y", function()
   vim.cmd('normal! y')
   yank_to_clipboard()
 end, { desc = "Yank selection to clipboard" })
+
+
+-- Custom keymap for commenting
+vim.keymap.set("n", "<leader>c", "<Plug>(comment_toggle_linewise_current)", { noremap = true, silent = true, desc = "Toggle comment" })
+vim.keymap.set("v", "<leader>c", "<Plug>(comment_toggle_linewise_visual)", { noremap = true, silent = true, desc = "Toggle comment" })
+vim.keymap.set("n", "<leader>b", "<Plug>(comment_toggle_blockwise_current)", { noremap = true, silent = true, desc = "Toggle block comment" })
+vim.keymap.set("v", "<leader>b", "<Plug>(comment_toggle_blockwise_visual)", { noremap = true, silent = true, desc = "Toggle block comment" })
