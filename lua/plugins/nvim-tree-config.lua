@@ -13,7 +13,6 @@ return {
           enable = false, -- Disable to prevent window resizing
         },
       },
-      resize_window = false, -- Prevent any window resizing
     },
     renderer = {
       add_trailing = false,

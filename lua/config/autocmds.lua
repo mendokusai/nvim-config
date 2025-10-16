@@ -19,49 +19,60 @@ local resize_timer = nil
 local last_resize_time = 0
 local resize_count = 0
 local max_resize_attempts = 3
+local startup_complete = false
+
+-- Mark startup as complete after a delay to avoid initial resize chaos
+vim.defer_fn(function()
+  startup_complete = true
+end, 1000) -- Wait 1 second after startup
 
 vim.api.nvim_create_augroup("custom_resize_splits", { clear = true })
 vim.api.nvim_create_autocmd({ "VimResized" }, {
   group = "custom_resize_splits",
   callback = function()
+    -- Skip resize handling during startup phase
+    if not startup_complete then
+      return
+    end
+
+    -- Early exit for small windows - check immediately
+    local columns = vim.o.columns
+    local lines = vim.o.lines
+    if columns < 100 or lines < 30 then
+      -- Skip all resize operations in small terminals/windows
+      return
+    end
+
     local current_time = vim.loop.hrtime()
-    
+
     -- Reset counter if enough time has passed
     if current_time - last_resize_time > 2000000000 then -- 2 seconds in nanoseconds
       resize_count = 0
     end
-    
+
     -- Prevent resize loops by limiting attempts
     resize_count = resize_count + 1
     if resize_count > max_resize_attempts then
       return
     end
-    
+
     last_resize_time = current_time
-    
-    -- Check if we're in a very small terminal (likely floating)
-    local columns = vim.o.columns
-    local lines = vim.o.lines
-    if columns < 80 or lines < 24 then
-      -- Skip resize operations in very small terminals
-      return
-    end
-    
+
     if resize_timer then
       vim.fn.timer_stop(resize_timer)
     end
-    
+
     resize_timer = vim.fn.timer_start(250, function() -- Increased debounce to 250ms
       local current_tab = vim.fn.tabpagenr()
       local has_resized = false
-      
+
       -- Only equalize non-terminal, non-floating windows
       for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
         if vim.api.nvim_win_is_valid(win) then
           local buf = vim.api.nvim_win_get_buf(win)
           local buftype = vim.bo[buf].buftype
           local config = vim.api.nvim_win_get_config(win)
-          
+
           -- Skip terminals and floating windows
           if buftype ~= "terminal" and config.relative == "" then
             if not has_resized then
@@ -72,7 +83,7 @@ vim.api.nvim_create_autocmd({ "VimResized" }, {
           end
         end
       end
-      
+
       vim.cmd("tabnext " .. current_tab)
     end)
   end,
@@ -82,25 +93,27 @@ vim.api.nvim_create_autocmd({ "VimResized" }, {
 local function create_resize_escape_hatch()
   local rapid_resize_count = 0
   local last_rapid_resize = 0
-  
+
   vim.api.nvim_create_autocmd("VimResized", {
     group = vim.api.nvim_create_augroup("resize_escape_hatch", { clear = true }),
     callback = function()
       local current_time = vim.loop.hrtime()
-      
+
       -- If we get more than 5 resizes in 1 second, disable all resize handling
       if current_time - last_rapid_resize < 1000000000 then -- 1 second
         rapid_resize_count = rapid_resize_count + 1
         if rapid_resize_count > 5 then
           -- Emergency: Disable all autocmds for VimResized
-          vim.api.nvim_del_augroup_by_name("custom_resize_splits")
-          vim.notify("Resize loop detected! Disabled resize handling. Restart nvim to re-enable.", vim.log.levels.WARN)
+          vim.schedule(function()
+            pcall(vim.api.nvim_del_augroup_by_name, "custom_resize_splits")
+            vim.notify("Resize loop detected! Disabled resize handling. Restart nvim to re-enable.", vim.log.levels.WARN)
+          end)
           return
         end
       else
         rapid_resize_count = 0
       end
-      
+
       last_rapid_resize = current_time
     end,
   })

@@ -47,18 +47,6 @@ vim.opt.winheight = 1
 vim.opt.cmdheight = 1
 
 -- Prevent vim from trying to resize windows too aggressively
-vim.opt.splitright = true
-vim.opt.splitbelow = true
-
--- Terminal detection and resize guards
-if vim.o.columns < 100 or vim.o.lines < 30 then
-  -- We're likely in a smaller/floating terminal
-  vim.opt.laststatus = 2  -- Always show statusline but don't auto-resize
-  vim.opt.showtabline = 1 -- Only show tabline when needed
-else
-  vim.opt.laststatus = 3  -- Global statusline
-  vim.opt.showtabline = 2 -- Always show tabline
-end
 
 vim.filetype.add({
   extension = {
