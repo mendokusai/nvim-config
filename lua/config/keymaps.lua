@@ -12,7 +12,7 @@ local function yank_to_clipboard()
   vim.fn.setreg('*', text)
 end
 
-vim.keymap.set("n", "yy", function() 
+vim.keymap.set("n", "yy", function()
   vim.cmd('normal! yy')
   yank_to_clipboard()
 end, { desc = "Yank line to clipboard" })
@@ -36,7 +36,6 @@ vim.keymap.set("v", "y", function()
   vim.cmd('normal! y')
   yank_to_clipboard()
 end, { desc = "Yank selection to clipboard" })
-
 
 -- Custom keymap for commenting
 vim.keymap.set("n", "<leader>c", "<Plug>(comment_toggle_linewise_current)", { noremap = true, silent = true, desc = "Toggle comment" })

@@ -15,6 +15,7 @@ vim.opt.wrap = true
 vim.opt.linebreak = true
 vim.opt.breakindent = true
 vim.opt.foldmethod = "manual"
+vim.opt.fixendofline = false
 
 -- Enable system clipboard
 vim.o.clipboard = "unnamed,unnamedplus"
@@ -55,13 +56,16 @@ vim.filetype.add({
 })
 
 vim.api.nvim_create_autocmd("FileType", {
-  pattern = "markdown",
+  pattern = "*",
   callback = function()
     vim.opt_local.wrap = true
-    vim.opt_local.linebreak = true
-    vim.opt_local.tabstop = 2
-    vim.opt_local.shiftwidth = 2
-    vim.opt_local.expandtab = true
-    vim.opt_local.formatoptions:remove({ "c", "r", "o" })
+  end,
+})
+
+vim.api.nvim_create_autocmd("WinNew", {
+  pattern = "*",
+  callback = function()
+    vim.opt.splitright = true
+    vim.opt.splitbelow = true
   end,
 })
