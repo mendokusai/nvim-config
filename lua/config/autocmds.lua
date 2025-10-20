@@ -158,7 +158,7 @@ local function enable_warnings()
   notify_state()
 end
 
-vim.api.nvim_create_user_command("DiagnosticsWarningsToggle", function()
+vim.api.nvim_create_user_command("DiagnosticsToggle", function()
   if show_warnings then
     disable_warnings()
   else
@@ -166,8 +166,12 @@ vim.api.nvim_create_user_command("DiagnosticsWarningsToggle", function()
   end
 end, {})
 
-vim.api.nvim_create_user_command("DiagnosticsWarningsDisable", disable_warnings, {})
-vim.api.nvim_create_user_command("DiagnosticsWarningsEnable", enable_warnings, {})
+vim.api.nvim_create_user_command("DiagnosticsDisable", disable_warnings, {})
+vim.api.nvim_create_user_command("DiagnosticsEnable", enable_warnings, {})
+
+vim.api.nvim_create_user_command("DT", function()
+  vim.cmd("DiagnosticsToggle")
+end, {})
 
 -- A method to clean up simple glyph errors on save.
 local function fix_glyph_issues()
