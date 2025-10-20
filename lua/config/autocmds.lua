@@ -17,7 +17,9 @@ local min_lines = 24
 local equalize_cooldown_ns = 200000000 -- 200ms expressed in nanoseconds
 local severity = vim.diagnostic.severity
 local show_warnings = true
-local diagnostics_group = vim.api.nvim_create_augroup("diagnostics_warning_toggle", { clear = true })
+local error_only_filter = { min = severity.ERROR, max = severity.ERROR }
+local default_diagnostic_config = vim.deepcopy(vim.diagnostic.config())
+local errors_only_config = nil
 
 local in_equalize = false
 local pending_equalize = false
@@ -94,23 +96,78 @@ vim.api.nvim_create_autocmd("VimResized", {
   end,
 })
 
-vim.api.nvim_create_user_command("DiagnosticsWarningsToggle", function()
-  show_warnings = not show_warnings
-  local new_filter = show_warnings and nil or severity.ERROR
+local function restrict_severity(option)
+  if option == nil or option == false then
+    return option
+  end
+  if option == true then
+    return { severity = error_only_filter }
+  end
+  if type(option) == "table" then
+    local copy = vim.deepcopy(option)
+    copy.severity = error_only_filter
+    return copy
+  end
+  return option
+end
 
-  vim.diagnostic.handlers.virtual_text._on_severity_limit(nil, nil, new_filter)
-  vim.diagnostic.handlers.signs._on_severity_limit(nil, nil, new_filter)
+local function build_errors_only_config()
+  local config = vim.deepcopy(default_diagnostic_config)
+  config.virtual_text = restrict_severity(config.virtual_text)
+  config.signs = restrict_severity(config.signs)
+  config.underline = restrict_severity(config.underline)
+  config.float = restrict_severity(config.float)
+  return config
+end
+
+local function apply_diagnostic_config()
+  if show_warnings then
+    vim.diagnostic.config(default_diagnostic_config)
+  else
+    errors_only_config = errors_only_config or build_errors_only_config()
+    vim.diagnostic.config(errors_only_config)
+  end
+end
+
+local function notify_state()
   vim.notify(
     show_warnings and "Diagnostic warnings enabled" or "Diagnostic warnings hidden (errors only)",
     vim.log.levels.INFO,
     { title = "Diagnostics" }
   )
+end
+
+local function disable_warnings()
+  if not show_warnings then
+    return
+  end
+  default_diagnostic_config = vim.deepcopy(vim.diagnostic.config())
+  errors_only_config = build_errors_only_config()
+  show_warnings = false
+  apply_diagnostic_config()
+  notify_state()
+end
+
+local function enable_warnings()
+  if show_warnings then
+    return
+  end
+  show_warnings = true
+  apply_diagnostic_config()
+  errors_only_config = nil
+  notify_state()
+end
+
+vim.api.nvim_create_user_command("DiagnosticsWarningsToggle", function()
+  if show_warnings then
+    disable_warnings()
+  else
+    enable_warnings()
+  end
 end, {})
 
-vim.api.nvim_create_autocmd("DiagnosticChanged", {
-  group = diagnostics_group,
-  callback = function() end,
-})
+vim.api.nvim_create_user_command("DiagnosticsWarningsDisable", disable_warnings, {})
+vim.api.nvim_create_user_command("DiagnosticsWarningsEnable", enable_warnings, {})
 
 -- A method to clean up simple glyph errors on save.
 local function fix_glyph_issues()
