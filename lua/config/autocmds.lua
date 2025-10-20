@@ -8,119 +8,109 @@
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
 -- Override LazyVim's window resize behavior to prevent resize loops
--- Safely delete the group if it exists
-local success, _ = pcall(vim.api.nvim_del_augroup_by_name, "lazyvim_resize_splits")
-if not success then
-  -- Group doesn't exist yet, which is fine
-end
+pcall(vim.api.nvim_del_augroup_by_name, "lazyvim_resize_splits")
 
--- Create custom resize behavior with debouncing and terminal detection
-local resize_timer = nil
-local last_resize_time = 0
-local resize_count = 0
-local max_resize_attempts = 3
-local startup_complete = false
+local resize_group = vim.api.nvim_create_augroup("custom_resize_splits", { clear = true })
+local debounce_ms = 120
+local min_columns = 80
+local min_lines = 24
+local equalize_cooldown_ns = 200000000 -- 200ms expressed in nanoseconds
+local severity = vim.diagnostic.severity
+local show_warnings = true
+local diagnostics_group = vim.api.nvim_create_augroup("diagnostics_warning_toggle", { clear = true })
 
--- Mark startup as complete after a delay to avoid initial resize chaos
-vim.defer_fn(function()
-  startup_complete = true
-end, 1000) -- Wait 1 second after startup
+local in_equalize = false
+local pending_equalize = false
+local last_equalize_time = 0
 
-vim.api.nvim_create_augroup("custom_resize_splits", { clear = true })
-vim.api.nvim_create_autocmd({ "VimResized" }, {
-  group = "custom_resize_splits",
-  callback = function()
-    -- Skip resize handling during startup phase
-    if not startup_complete then
-      return
-    end
+local function has_multiple_normal_windows()
+  local count = 0
 
-    -- Early exit for small windows - check immediately
-    local columns = vim.o.columns
-    local lines = vim.o.lines
-    if columns < 100 or lines < 30 then
-      -- Skip all resize operations in small terminals/windows
-      return
-    end
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.api.nvim_win_is_valid(win) then
+      local config = vim.api.nvim_win_get_config(win)
 
-    local current_time = vim.loop.hrtime()
+      if config.relative == "" then
+        local buf = vim.api.nvim_win_get_buf(win)
+        local buftype = vim.bo[buf].buftype
 
-    -- Reset counter if enough time has passed
-    if current_time - last_resize_time > 2000000000 then -- 2 seconds in nanoseconds
-      resize_count = 0
-    end
-
-    -- Prevent resize loops by limiting attempts
-    resize_count = resize_count + 1
-    if resize_count > max_resize_attempts then
-      return
-    end
-
-    last_resize_time = current_time
-
-    if resize_timer then
-      vim.fn.timer_stop(resize_timer)
-    end
-
-    resize_timer = vim.fn.timer_start(250, function() -- Increased debounce to 250ms
-      local current_tab = vim.fn.tabpagenr()
-      local has_resized = false
-
-      -- Only equalize non-terminal, non-floating windows
-      for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-        if vim.api.nvim_win_is_valid(win) then
-          local buf = vim.api.nvim_win_get_buf(win)
-          local buftype = vim.bo[buf].buftype
-          local config = vim.api.nvim_win_get_config(win)
-
-          -- Skip terminals and floating windows
-          if buftype ~= "terminal" and config.relative == "" then
-            if not has_resized then
-              vim.cmd("wincmd =")
-              has_resized = true
-            end
-            break
+        if buftype ~= "terminal" and buftype ~= "quickfix" then
+          count = count + 1
+          if count > 1 then
+            return true
           end
         end
       end
+    end
+  end
 
-      vim.cmd("tabnext " .. current_tab)
-    end)
+  return false
+end
+
+local function equalize_splits()
+  if in_equalize then
+    return
+  end
+
+  in_equalize = true
+  pending_equalize = false
+
+  if not has_multiple_normal_windows() then
+    in_equalize = false
+    return
+  end
+
+  local ok, err = pcall(vim.cmd, "wincmd =")
+  last_equalize_time = vim.loop.hrtime()
+  in_equalize = false
+
+  if not ok then
+    vim.notify(("Equalize splits failed: %s"):format(err), vim.log.levels.WARN)
+  end
+end
+
+vim.api.nvim_create_autocmd("VimResized", {
+  group = resize_group,
+  callback = function()
+    if vim.o.columns < min_columns or vim.o.lines < min_lines then
+      return
+    end
+
+    if in_equalize then
+      return
+    end
+
+    local now = vim.loop.hrtime()
+    if now - last_equalize_time < equalize_cooldown_ns then
+      return
+    end
+
+    if pending_equalize then
+      return
+    end
+
+    pending_equalize = true
+    vim.defer_fn(equalize_splits, debounce_ms)
   end,
 })
 
--- Emergency escape hatch for resize loops
-local function create_resize_escape_hatch()
-  local rapid_resize_count = 0
-  local last_rapid_resize = 0
+vim.api.nvim_create_user_command("DiagnosticsWarningsToggle", function()
+  show_warnings = not show_warnings
+  local new_filter = show_warnings and nil or severity.ERROR
 
-  vim.api.nvim_create_autocmd("VimResized", {
-    group = vim.api.nvim_create_augroup("resize_escape_hatch", { clear = true }),
-    callback = function()
-      local current_time = vim.loop.hrtime()
+  vim.diagnostic.handlers.virtual_text._on_severity_limit(nil, nil, new_filter)
+  vim.diagnostic.handlers.signs._on_severity_limit(nil, nil, new_filter)
+  vim.notify(
+    show_warnings and "Diagnostic warnings enabled" or "Diagnostic warnings hidden (errors only)",
+    vim.log.levels.INFO,
+    { title = "Diagnostics" }
+  )
+end, {})
 
-      -- If we get more than 5 resizes in 1 second, disable all resize handling
-      if current_time - last_rapid_resize < 1000000000 then -- 1 second
-        rapid_resize_count = rapid_resize_count + 1
-        if rapid_resize_count > 5 then
-          -- Emergency: Disable all autocmds for VimResized
-          vim.schedule(function()
-            pcall(vim.api.nvim_del_augroup_by_name, "custom_resize_splits")
-            vim.notify("Resize loop detected! Disabled resize handling. Restart nvim to re-enable.", vim.log.levels.WARN)
-          end)
-          return
-        end
-      else
-        rapid_resize_count = 0
-      end
-
-      last_rapid_resize = current_time
-    end,
-  })
-end
-
--- Initialize the escape hatch
-create_resize_escape_hatch()
+vim.api.nvim_create_autocmd("DiagnosticChanged", {
+  group = diagnostics_group,
+  callback = function() end,
+})
 
 -- A method to clean up simple glyph errors on save.
 local function fix_glyph_issues()

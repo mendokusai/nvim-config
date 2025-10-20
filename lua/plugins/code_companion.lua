@@ -6,6 +6,8 @@
     dependencies = {
     "nvim-lua/plenary.nvim",
     "nvim-treesitter/nvim-treesitter",
+    "nvim-telescope/telescope.nvim",
+      { "MeanderingProgrammer/render-markdown.nvim", ft = { "markdown", "codecompanion" } },
   },
     config = function()
       require("codecompanion").setup({
@@ -40,7 +42,15 @@
           inline = {
             adapter = "anthropic",
           },
+          agent = {
+            adapter = "anthropic",
+          },
         }
       })
     end,
+    keys = {
+      { "<leader>aa", "<cmd>CodeCompanionActions<cr>", desc = "CodeCompanion Actions", mode = { "n", "v" } },
+      { "<leader>ac", "<cmd>CodeCompanionChat Toggle<cr>", desc = "Toggle Chat", mode = { "n", "v" } },
+    },
   }
+
