@@ -194,32 +194,6 @@ local function fix_glyph_issues()
     vim.cmd(string.format([[silent! %%s/\t/%s/ge]], string.rep(" ", shiftwidth)))
   end
 
-  -- Ensure single newline at EOF
-  -- vim.cmd([[silent! %s/\n\+\%\%\$///e]])
-  -- if vim.fn.getline('
-
-  vim.fn.winrestview(save_view)
-  vim.fn.setpos(".", save_cursor)
-end
-
--- linewraps
-vim.opt_local.wrap = true
-
-vim.api.nvim_create_autocmd("BufWritePre", {
-  pattern = "*",
-  callback = fix_glyph_issues,
-})
-
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "*",
-  callback = function()
-    vim.opt.conceallevel = 0
-  end,
-})
-) ~= '' then
-  --   vim.cmd([[silent! normal! Go]])
-  -- end
-
   vim.fn.winrestview(save_view)
   vim.fn.setpos(".", save_cursor)
 end
